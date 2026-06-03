@@ -1,0 +1,351 @@
+// ============================================================
+// TeamUp — Prisma Schema
+// Covers the full system. Features built in week 1 and deferred
+// features (chat, notifications, feed, invitations) share one model.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USERS & AUTH
+// ============================================================
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String // bcrypt hash — never the plain password
+  fullName       String
+  university     String?
+  major          String?
+  graduationYear Int?
+  bio            String?
+  avatarUrl      String?
+  linkedinUrl    String?
+  githubUrl      String?
+  websiteUrl     String?
+  interests      String[] @default([]) // Postgres native array
+  role           Role     @default(STUDENT)
+  refreshToken   String? // hashed refresh token -> lets us invalidate sessions on logout
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // relations
+  skills          UserSkill[]
+  portfolioItems  PortfolioItem[]
+  ownedProjects   Project[]       @relation("ProjectOwner")
+  memberships     ProjectMember[]
+  applications    Application[]
+  sentInvites     Invitation[]    @relation("Inviter")
+  receivedInvites Invitation[]    @relation("Invitee")
+  bookmarks       Bookmark[]
+  sentMessages    Message[]       @relation("MessageSender")
+  notifications   Notification[]
+  posts           Post[]
+  comments        Comment[]
+  likes           Like[]
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+// ============================================================
+// SKILLS  (many-to-many: User <-> Skill, Project <-> Skill)
+// ============================================================
+
+model Skill {
+  id   String @id @default(cuid())
+  name String @unique // "React", "Node.js", etc.
+
+  users    UserSkill[]
+  projects ProjectSkill[]
+}
+
+model UserSkill {
+  userId  String
+  skillId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId]) // composite PK = a user can't have the same skill twice
+}
+
+// ============================================================
+// PORTFOLIO  (Cloudinary URLs + metadata in Postgres)
+// ============================================================
+
+model PortfolioItem {
+  id        String        @id @default(cuid())
+  userId    String
+  type      PortfolioType
+  title     String?
+  url       String // Cloudinary secure_url
+  publicId  String // Cloudinary public_id — needed to delete the asset later
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum PortfolioType {
+  IMAGE
+  RESUME
+  CERTIFICATE
+  OTHER
+}
+
+// ============================================================
+// PROJECTS
+// ============================================================
+
+model Project {
+  id          String          @id @default(cuid())
+  title       String
+  description String
+  category    ProjectCategory
+  difficulty  Difficulty
+  duration    String? // free text e.g. "2 weeks", "3 months"
+  maxMembers  Int             @default(5)
+  status      ProjectStatus   @default(OPEN)
+  isRemote    Boolean         @default(false) // supports the "Remote Projects" filter
+  ownerId     String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  owner          User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  requiredSkills ProjectSkill[]
+  members        ProjectMember[]
+  applications   Application[]
+  invitations    Invitation[]
+  bookmarks      Bookmark[]
+  messages       Message[]
+
+  @@index([category, status]) // common filter combo -> index it
+}
+
+enum ProjectCategory {
+  STARTUP
+  HACKATHON
+  COMPETITION
+  RESEARCH
+  THESIS
+  OPEN_SOURCE
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ProjectStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+model ProjectSkill {
+  projectId String
+  skillId   String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, skillId])
+}
+
+// ============================================================
+// TEAM MEMBERSHIP & ROLES
+// ============================================================
+
+model ProjectMember {
+  id        String     @id @default(cuid())
+  projectId String
+  userId    String
+  role      MemberRole @default(FULLSTACK_DEVELOPER)
+  joinedAt  DateTime   @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId]) // a user joins a project once
+}
+
+enum MemberRole {
+  LEADER
+  FRONTEND_DEVELOPER
+  BACKEND_DEVELOPER
+  FULLSTACK_DEVELOPER
+  UIUX_DESIGNER
+  DATA_ANALYST
+  ML_ENGINEER
+  BLOCKCHAIN_DEVELOPER
+}
+
+// ============================================================
+// APPLICATIONS  (student -> applies -> project)
+// ============================================================
+
+model Application {
+  id        String            @id @default(cuid())
+  projectId String
+  userId    String
+  message   String?
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId]) // can't apply twice to the same project
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// ============================================================
+// INVITATIONS  (owner -> invites -> user)  [deferred build]
+// ============================================================
+
+model Invitation {
+  id        String           @id @default(cuid())
+  projectId String
+  inviterId String
+  inviteeId String
+  status    InvitationStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inviter User    @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User    @relation("Invitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, inviteeId])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// ============================================================
+// BOOKMARKS  [deferred build]
+// ============================================================
+
+model Bookmark {
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+}
+
+// ============================================================
+// MESSAGES — project-scoped team chat  [deferred build]
+// ============================================================
+
+model Message {
+  id        String   @id @default(cuid())
+  projectId String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sender  User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  reads   MessageRead[]
+
+  @@index([projectId, createdAt]) // fetch a room's history fast
+}
+
+// read receipts: one row per (message, reader)
+model MessageRead {
+  messageId String
+  userId    String // who read it (plain column, no back-relation to keep User lean)
+  readAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+}
+
+// ============================================================
+// NOTIFICATIONS  [deferred build]
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  message   String
+  link      String? // deep link, e.g. /projects/:id
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead]) // unread-count query
+}
+
+enum NotificationType {
+  NEW_APPLICATION
+  APPLICATION_ACCEPTED
+  APPLICATION_REJECTED
+  NEW_INVITATION
+  INVITATION_ACCEPTED
+  NEW_MESSAGE
+}
+
+// ============================================================
+// ACTIVITY FEED  [deferred build]
+// ============================================================
+
+model Post {
+  id        String   @id @default(cuid())
+  authorId  String
+  content   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments Comment[]
+  likes    Like[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId]) // one like per user per post
+}
