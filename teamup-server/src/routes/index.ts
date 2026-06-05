@@ -1,6 +1,7 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes";
 import userRoutes from "./user.routes";
+import projectRoutes from "./project.routes";
 import { userController } from "../controllers/user.controller";
 import { requireAuth } from "../middlewares/auth";
 
@@ -17,6 +18,6 @@ router.use("/users", userRoutes);
 // Skills catalog is a top-level read (still requires auth).
 router.get("/skills", requireAuth, userController.skillCatalog);
 
-// router.use("/projects", projectRoutes);  <- Day 5
+router.use("/projects", projectRoutes);
 
 export default router;

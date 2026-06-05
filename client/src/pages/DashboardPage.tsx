@@ -14,6 +14,8 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <span className="font-display text-2xl font-bold">TeamUp</span>
         <div className="flex items-center gap-2">
+          <Link to="/projects"><Button variant="ghost">Browse projects</Button></Link>
+          <Link to="/projects/new"><Button variant="ghost">New project</Button></Link>
           <Link to="/profile"><Button variant="ghost">My profile</Button></Link>
           <Button variant="ghost" onClick={() => logout()}>Log out</Button>
         </div>
