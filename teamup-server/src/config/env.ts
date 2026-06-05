@@ -21,6 +21,12 @@ const envSchema = z.object({
 
   // comma-separated list of allowed frontend origins for CORS
   CLIENT_ORIGIN: z.string().default("http://localhost:5173"),
+
+  // Cloudinary — OPTIONAL so the app boots without them. Avatar upload is
+  // simply disabled (returns a friendly 503) until you add these.
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

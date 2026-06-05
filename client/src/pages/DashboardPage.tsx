@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/Button";
 
@@ -12,9 +13,10 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-3xl px-6 py-16">
       <div className="flex items-center justify-between">
         <span className="font-display text-2xl font-bold">TeamUp</span>
-        <Button variant="ghost" onClick={() => logout()}>
-          Log out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link to="/profile"><Button variant="ghost">My profile</Button></Link>
+          <Button variant="ghost" onClick={() => logout()}>Log out</Button>
+        </div>
       </div>
 
       <div className="mt-12 rounded-2xl border border-black/10 bg-white p-8">
