@@ -48,6 +48,15 @@ export const projectRepository = {
     return prisma.project.delete({ where: { id } });
   },
 
+  // Day 6: open projects with their required skills, for skill-based matching.
+  listOpenWithSkills() {
+    return prisma.project.findMany({
+      where: { status: "OPEN" },
+      include: cardInclude,
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
   // Replace a project's required-skill links (used on update).
   async setRequiredSkills(projectId: string, skillIds: string[]) {
     await prisma.$transaction([

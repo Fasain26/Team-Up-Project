@@ -26,6 +26,7 @@ export function NavBar() {
           <nav className="flex items-center gap-6">
             {link("/projects", "Browse")}
             {link("/projects/new", "New project")}
+            {link("/applications", "Applications")}
           </nav>
         </div>
         <div className="flex items-center gap-4">

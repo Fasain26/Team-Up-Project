@@ -37,3 +37,20 @@ export const userRepository = {
     return prisma.user.update({ where: { id: userId }, data: { refreshToken: hashedToken } });
   },
 };
+
+// Appended Day 6: all students with their skills (for project->user matching).
+export const userMatchRepository = {
+  listStudentsWithSkills() {
+    return prisma.user.findMany({
+      where: { role: "STUDENT" },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+        university: true,
+        major: true,
+        skills: { include: { skill: true } },
+      },
+    });
+  },
+};

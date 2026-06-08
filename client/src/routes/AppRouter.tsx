@@ -6,6 +6,7 @@ import ProfilePage from "../pages/ProfilePage";
 import ProjectsPage from "../pages/ProjectsPage";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import ProjectDetailPage from "../pages/ProjectDetailPage";
+import ApplicationsPage from "../pages/ApplicationsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export function AppRouter() {
@@ -23,6 +24,7 @@ export function AppRouter() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<CreateProjectPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
         </Route>
 
         {/* default + fallback */}

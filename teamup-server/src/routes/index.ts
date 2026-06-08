@@ -2,6 +2,7 @@ import { Router } from "express";
 import authRoutes from "./auth.routes";
 import userRoutes from "./user.routes";
 import projectRoutes from "./project.routes";
+import engagementRoutes from "./engagement.routes";
 import { userController } from "../controllers/user.controller";
 import { requireAuth } from "../middlewares/auth";
 
@@ -19,5 +20,6 @@ router.use("/users", userRoutes);
 router.get("/skills", requireAuth, userController.skillCatalog);
 
 router.use("/projects", projectRoutes);
+router.use("/", engagementRoutes); // /applications/me, /dashboard, /users/me/recommendations
 
 export default router;
