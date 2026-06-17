@@ -10,7 +10,8 @@
     "test:watch": "vitest",
     "prisma:studio": "prisma studio",
     "migrate:dev": "prisma migrate dev",
-    "db:seed": "ts-node prisma/seed.ts"
+    "db:seed": "ts-node prisma/seed.ts",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
