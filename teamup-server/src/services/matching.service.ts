@@ -2,6 +2,7 @@ import { projectRepository } from "../repositories/project.repository";
 import { userMatchRepository } from "../repositories/user.repository";
 import { userRepository } from "../repositories/user.repository";
 import { AppError } from "../utils/AppError";
+import { computeMatchScore, normalizeSkillNames } from "../utils/match";
 
 /**
  * THE MATCHING FORMULA (from the spec):
@@ -11,17 +12,6 @@ import { AppError } from "../utils/AppError";
  * A project with no required skills can't be scored, so we return 0.
  * Names are compared case-insensitively.
  */
-function scoreFit(userSkillNames: Set<string>, requiredNames: string[]): number {
-  if (requiredNames.length === 0) return 0;
-  const matched = requiredNames.filter((r) => userSkillNames.has(r.toLowerCase())).length;
-  return Math.round((matched / requiredNames.length) * 100);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function skillNameSet(skills: any[]): Set<string> {
-  return new Set((skills ?? []).map((s) => (s.skill?.name ?? s.name).toLowerCase()));
-}
-
 export const matchingService = {
   /**
    * GET /projects/:id/matches
@@ -44,7 +34,7 @@ export const matchingService = {
       .map((u: any) => ({
         user: { id: u.id, fullName: u.fullName, avatarUrl: u.avatarUrl, university: u.university },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        matchScore: scoreFit(skillNameSet((u as any).skills), required),
+        matchScore: computeMatchScore(normalizeSkillNames((u as any).skills), required),
       }))
       .filter((m: any) => m.matchScore > 0)
       .sort((a: any, b: any) => b.matchScore - a.matchScore)
@@ -60,7 +50,7 @@ export const matchingService = {
     const me = await userRepository.findProfileById(userId);
     if (!me) throw AppError.notFound("User not found");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mySkills = skillNameSet((me as any).skills);
+    const mySkills = normalizeSkillNames((me as any).skills);
 
     const projects = await projectRepository.listOpenWithSkills();
 
@@ -78,7 +68,7 @@ export const matchingService = {
           requiredSkills: p.requiredSkills.map((rs: any) => ({ id: rs.skill.id, name: rs.skill.name })), // eslint-disable-line @typescript-eslint/no-explicit-any
           memberCount: p._count?.members ?? 0,
           maxMembers: p.maxMembers,
-          matchScore: scoreFit(mySkills, required),
+          matchScore: computeMatchScore(mySkills, required),
         };
       })
       .sort((a: any, b: any) => b.matchScore - a.matchScore)
@@ -95,6 +85,6 @@ export const matchingService = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const required = (project as any).requiredSkills.map((rs: any) => rs.skill.name as string);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return { matchScore: scoreFit(skillNameSet((me as any).skills), required) };
+    return { matchScore: computeMatchScore(normalizeSkillNames((me as any).skills), required) };
   },
 };

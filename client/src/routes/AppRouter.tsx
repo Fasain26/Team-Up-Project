@@ -7,7 +7,16 @@ import ProjectsPage from "../pages/ProjectsPage";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import ProjectDetailPage from "../pages/ProjectDetailPage";
 import ApplicationsPage from "../pages/ApplicationsPage";
+import LandingPage from "../pages/LandingPage";
 import { ProtectedRoute } from "./ProtectedRoute";
+import { useAuth } from "../contexts/AuthContext";
+
+// Show the marketing landing page to guests; send logged-in users to the app.
+function Home() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  return user ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+}
 
 export function AppRouter() {
   return (
@@ -27,9 +36,9 @@ export function AppRouter() {
           <Route path="/applications" element={<ApplicationsPage />} />
         </Route>
 
-        {/* default + fallback */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* landing (public) */}
+        <Route path="/" element={<Home />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
